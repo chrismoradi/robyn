@@ -91,9 +91,7 @@ impl Server {
         let asyncio = py.import("asyncio").unwrap();
 
         let event_loop = asyncio.call_method0("new_event_loop").unwrap();
-        asyncio
-            .call_method1("set_event_loop", (event_loop,))
-            .unwrap();
+        asyncio.call_method1("set_event_loop", (event_loop,))?;
         let event_loop_hdl = Arc::new(PyObject::from(event_loop));
         let event_loop_cleanup = event_loop_hdl.clone();
         let startup_handler = self.startup_handler.clone();
@@ -104,7 +102,9 @@ impl Server {
             let copied_event_loop = event_loop_hdl.clone();
             actix_web::rt::System::new().block_on(async move {
                 println!("The number of workers are {}", workers.clone());
-                execute_event_handler(startup_handler, copied_event_loop.clone()).await;
+                execute_event_handler(startup_handler, copied_event_loop.clone())
+                    .await
+                    .unwrap();
 
                 HttpServer::new(move || {
                     let mut app = App::new();
@@ -194,7 +194,9 @@ impl Server {
             Python::with_gil(|py| {
                 let event_loop_hdl = event_loop_cleanup.clone();
                 pyo3_asyncio::tokio::run(py, async move {
-                    execute_event_handler(shutdown_handler, event_loop_hdl.clone()).await;
+                    execute_event_handler(shutdown_handler, event_loop_hdl.clone())
+                        .await
+                        .unwrap();
                     Ok(())
                 })
                 .unwrap();
@@ -242,7 +244,8 @@ impl Server {
     ) {
         println!("Route added for {} {} ", route_type, route);
         self.router
-            .add_route(route_type, route, handler, is_async, number_of_params);
+            .add_route(route_type, route, handler, is_async, number_of_params)
+            .unwrap();
     }
 
     /// Add a new route to the routing tables
